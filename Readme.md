@@ -32,12 +32,18 @@
       res.render('dashboard', {
           likes: req.user.getLikes()
         , latestNews: News.getLatest()
+        , locals: {
+            backwardcompatible: new Promise(somethingAsync)
+          }
       });
     });
 
     app.get('/partial', function (req, res, next) {
       res.partial('likes', {
           likes: req.user.getLikes()
+        , locals: {
+            backwardcompatible: new Promise(somethingAsync)
+          }
       });
     });
 
@@ -53,11 +59,19 @@
       res.send(promise);
     });
 
+    app.get('/more', function (req, res) {
+      res.send({
+          promise: new Promise(somethingAsync)
+        , news: req.user.getLatest()
+      });
+    });
+
 ### Features
 
  res.render support
  res.partial support
  res.send support
+ nested express locals support
 
 ### Error handling
 
