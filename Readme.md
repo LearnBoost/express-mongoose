@@ -1,11 +1,11 @@
 
-# Express-goose
+# Express-mongoose
 
- Express-goose adds Mongoose Query and Promise support to Express render, partial, and send methods.
+ Express-mongoose adds Mongoose Query and Promise support to Express render, partial, and send methods.
 
 ## Installation
 
-    $ npm install express-goose
+    $ npm install express-mongoose
 
 ### Example
 

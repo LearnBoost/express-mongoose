@@ -1,5 +1,5 @@
 /*!
- * Express-goose
+ * Express-mongoose
  * Copyright(c) 2011 LearnBoost <dev@learnboost.com>
  * MIT Licenced
  */
@@ -27,7 +27,7 @@ res.render = wrap(res.render);
 res.partial = wrap(res.partial);
 
 function wrap (method) {
-  return function expressgoose (view, options, callback, parent, sub) {
+  return function expressmongoose (view, options, callback, parent, sub) {
 
     if (!options || 'function' == typeof options) {
       return method.call(this, view, options, callback, parent, sub);
