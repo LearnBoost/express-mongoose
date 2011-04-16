@@ -1,0 +1,6 @@
+[submodule "support/expresso"]
+	path = support/expresso
+	url = https://github.com/visionmedia/expresso.git
+[submodule "support/jade"]
+	path = support/jade
+	url = https://github.com/visionmedia/jade.git

@@ -1,0 +1,459 @@
+
+/**
+ * Module dependencies.
+ */
+
+const mongoose = require('mongoose')
+    , express = require('express')
+    , assert = require('assert')
+    , should = require('should')
+    , Promise = mongoose.Promise
+    , Schema = mongoose.Schema
+
+require('../');
+
+/**
+ * Schema definition.
+ */
+
+var DrumsetSchema = new Schema({
+    brand: String
+  , color: String
+  , type:  String
+  , model: String
+});
+
+/**
+ * Schema methods.
+ */
+
+DrumsetSchema.statics.useQuery = function () {
+  // return a Query
+  return this.find({ color: 'black' });
+}
+
+DrumsetSchema.statics.usePromise = function () {
+  var promise = new Promise();
+  this.find({ type: 'Acoustic' }, promise.resolve.bind(promise));
+  return promise;
+}
+
+DrumsetSchema.statics.queryError = function () {
+  // should produce an invalid query error
+  return this.find({ color: { $fake: { $boom: [] }} });
+}
+
+DrumsetSchema.statics.promiseError = function () {
+  var promise = new Promise;
+  promise.error(new Error('splat!'));
+  return promise;
+}
+
+mongoose.model('Drumset', DrumsetSchema);
+
+/**
+ * Mongoose connection helper.
+ */
+
+function connect () {
+  return mongoose.createConnection('mongodb://localhost/express_goose_test');
+}
+
+/**
+ * Dummy data.
+ */
+
+var db = connect();
+var collection = 'drumsets_' + (Math.random() * 100000 | 0);
+var Drumset = db.model('Drumset', collection);
+var pending = 4;
+
+Drumset.create({
+    brand: 'Roland'
+  , color: 'black'
+  , type: 'electronic'
+  , _id: '4da8b662057a83596c000001'
+}, added);
+
+Drumset.create({
+    brand: 'GMS'
+  , color: 'Silver Sparkle'
+  , type: 'Acoustic'
+  , _id: '4da8b662057a83596c000002'
+}, added);
+
+Drumset.create({
+    brand: 'DW'
+  , color: 'Broken Glass'
+  , type: 'Acoustic'
+  , _id: '4da8b662057a83596c000003'
+}, added);
+
+Drumset.create({
+    brand: 'Meinl'
+  , color: 'black'
+  , type: 'Acoustic'
+  , _id: '4da8b662057a83596c000004'
+}, added);
+
+function added (err) {
+  if (err) return console.error(err);
+  if (--pending) return;
+  db.close();
+  assignExports();
+}
+
+/**
+ * Creates a test server.
+ */
+
+function makeapp () {
+  var app = express.createServer();
+  app.set('views', __dirname + '/fixtures');
+  app.set('view engine', 'jade');
+  return app;
+}
+
+/**
+ * DB is ready, export our expresso tests.
+ */
+
+function assignExports () {
+
+  exports['test render'] = function () {
+    var app = makeapp();
+    var db = connect();
+    var Drumset = db.model('Drumset', collection);
+
+    app.get('/renderquery', function (req, res) {
+      res.render('query', {
+        query: Drumset.useQuery()
+      });
+    });
+
+    app.get('/renderpromise', function (req, res) {
+      res.render('promise', {
+        promise: Drumset.usePromise()
+      });
+    });
+
+    app.get('/renderboth', function (req, res) {
+      res.render('both', {
+          query: Drumset.useQuery()
+        , promise: Drumset.usePromise()
+      });
+    });
+
+    app.get('/renderqueryerror', function (req, res) {
+      res.render('query', {
+        query: Drumset.queryError()
+      });
+    });
+
+    app.get('/renderpromiseerror', function (req, res) {
+      res.render('promise', {
+        promise: Drumset.promiseError()
+      });
+    });
+
+    app.get('/renderbotherror', function (req, res) {
+      res.render('both', {
+          query: Drumset.queryError()
+        , promise: Drumset.promiseError()
+      });
+    });
+
+    app.get('/renderbothnest', function (req, res) {
+      res.render('both', {
+          locals: {
+            promise: Drumset.usePromise()
+          }
+        , query: Drumset.useQuery()
+      });
+    });
+
+    app.get('/renderbothnesterror', function (req, res) {
+      res.render('both', {
+          locals: {
+            query: Drumset.queryError()
+          }
+        , promise: Drumset.usePromise()
+      });
+    });
+
+    // test
+
+    var pending = 6;
+    function done () {
+      --pending || db.close();
+    }
+
+    assert.response(app,
+      { url: '/renderquery' }
+    , { status: 200
+      , body: '<ul><li>Roland</li></ul>'
+      }
+    , done
+    );
+
+    assert.response(app,
+      { url: '/renderpromise' }
+    , { status: 200
+      , body: '<ul><li>Silver Sparkle</li></ul>'
+      }
+    , done
+    );
+
+    assert.response(app,
+      { url: '/renderboth' }
+    , { status: 200
+      , body: '<ul><li>Roland</li><li>Meinl</li></ul>'
+      }
+    , done
+    );
+
+    assert.response(app,
+      { url: '/renderbothnest' }
+    , { status: 200
+      , body: '<ul><li>Roland</li><li>Meinl</li></ul>'
+      }
+    , done
+    );
+
+    assert.response(app,
+      { url: '/renderqueryerror' }
+    , function (res) {
+        assert.equal(res.statusCode, 500);
+        assert.ok(~res.body.indexOf("Error: Can't use $fake with String."));
+        done();
+      }
+    );
+
+    assert.response(app,
+      { url: '/renderpromiseerror' }
+    , function (res) {
+        assert.equal(res.statusCode, 500);
+        assert.ok(~res.body.indexOf("Error: splat!"));
+        done();
+      }
+    );
+
+    assert.response(app,
+      { url: '/renderbotherror' }
+    , function (res) {
+        assert.equal(res.statusCode, 500);
+        assert.ok(~res.body.indexOf("Error: splat!"));
+        done();
+      }
+    );
+
+    assert.response(app,
+      { url: '/renderbothnesterror' }
+    , function (res) {
+        assert.equal(res.statusCode, 500);
+        assert.ok(~res.body.indexOf("Error: Can't use $fake with String."));
+        done();
+      }
+    );
+  };
+
+  exports['test partial'] = function () {
+    var app = makeapp();
+    var db = connect();
+    var Drumset = db.model('Drumset', collection);
+
+    app.get('/partialquery', function (req, res) {
+      res.partial('query', {
+        query: Drumset.useQuery()
+      });
+    });
+
+    app.get('/partialpromise', function (req, res) {
+      res.partial('promise', {
+        promise: Drumset.usePromise()
+      });
+    });
+
+    app.get('/partialboth', function (req, res) {
+      res.partial('both', {
+          query: Drumset.useQuery()
+        , promise: Drumset.usePromise()
+      });
+    });
+
+    app.get('/partialqueryerror', function (req, res) {
+      res.partial('query', {
+        query: Drumset.queryError()
+      });
+    });
+
+    app.get('/partialpromiseerror', function (req, res) {
+      res.partial('promise', {
+        promise: Drumset.promiseError()
+      });
+    });
+
+    app.get('/partialbotherror', function (req, res) {
+      res.partial('both', {
+          query: Drumset.queryError()
+        , promise: Drumset.promiseError()
+      });
+    });
+
+    // test
+
+    var pending = 6;
+    function done () {
+      --pending || db.close();
+    }
+
+    assert.response(app,
+      { url: '/partialquery' }
+    , { status: 200
+      , body: '<ul><li>Roland</li></ul>'
+      }
+    , done
+    );
+
+    assert.response(app,
+      { url: '/partialpromise' }
+    , { status: 200
+      , body: '<ul><li>Silver Sparkle</li></ul>'
+      }
+    , done
+    );
+
+    assert.response(app,
+      { url: '/partialboth' }
+    , { status: 200
+      , body: '<ul><li>Roland</li><li>Meinl</li></ul>'
+      }
+    , done
+    );
+
+    assert.response(app,
+      { url: '/partialqueryerror' }
+    , function (res) {
+        assert.equal(res.statusCode, 500);
+        assert.ok(~res.body.indexOf("Error: Can't use $fake with String."));
+        done();
+      }
+    );
+
+    assert.response(app,
+      { url: '/partialpromiseerror' }
+    , function (res) {
+        assert.equal(res.statusCode, 500);
+        assert.ok(~res.body.indexOf("Error: splat!"));
+        done();
+      }
+    );
+
+    assert.response(app,
+      { url: '/partialbotherror' }
+    , function (res) {
+        assert.equal(res.statusCode, 500);
+        assert.ok(~res.body.indexOf("Error: splat!"));
+        done();
+      }
+    );
+  };
+
+  exports['test send'] = function () {
+    var app = makeapp();
+    var db = connect();
+    var Drumset = db.model('Drumset', collection);
+
+    app.get('/sendquery', function (req, res) {
+      res.send(Drumset.useQuery());
+    });
+
+    app.get('/sendpromise', function (req, res) {
+      res.send(Drumset.usePromise());
+    });
+
+    app.get('/sendboth', function (req, res) {
+      res.send({
+          query: Drumset.useQuery()
+        , promise: Drumset.usePromise()
+      });
+    });
+
+    app.get('/sendqueryerror', function (req, res) {
+      res.send(Drumset.queryError());
+    });
+
+    app.get('/sendpromiseerror', function (req, res) {
+      res.send(Drumset.promiseError());
+    });
+
+    app.get('/sendbotherror', function (req, res) {
+      res.send({
+          query: Drumset.queryError()
+        , promise: Drumset.promiseError()
+      });
+    });
+
+    // test
+
+    var pending = 6;
+    function done () {
+      --pending || db.close();
+    }
+
+    assert.response(app,
+      { url: '/sendquery' }
+    , { status: 200
+      , body: '[{"_id":"4da8b662057a83596c000001","type":"electronic","color":"black","brand":"Roland"},{"_id":"4da8b662057a83596c000004","type":"Acoustic","color":"black","brand":"Meinl"}]'
+      , headers: { 'Content-Type': 'application/json' }
+      }
+    , done
+    );
+
+    assert.response(app,
+      { url: '/sendpromise' }
+    , { status: 200
+      , body: '[{"_id":"4da8b662057a83596c000002","type":"Acoustic","color":"Silver Sparkle","brand":"GMS"},{"_id":"4da8b662057a83596c000003","type":"Acoustic","color":"Broken Glass","brand":"DW"},{"_id":"4da8b662057a83596c000004","type":"Acoustic","color":"black","brand":"Meinl"}]'
+      , headers: { 'Content-Type': 'application/json' }
+      }
+    , done
+    );
+
+    assert.response(app,
+      { url: '/sendboth' }
+    , { status: 200
+      , body: '{"query":[{"_id":"4da8b662057a83596c000001","type":"electronic","color":"black","brand":"Roland"},{"_id":"4da8b662057a83596c000004","type":"Acoustic","color":"black","brand":"Meinl"}],"promise":[{"_id":"4da8b662057a83596c000002","type":"Acoustic","color":"Silver Sparkle","brand":"GMS"},{"_id":"4da8b662057a83596c000003","type":"Acoustic","color":"Broken Glass","brand":"DW"},{"_id":"4da8b662057a83596c000004","type":"Acoustic","color":"black","brand":"Meinl"}]}'
+      , headers: { 'Content-Type': 'application/json' }
+      }
+    , done
+    );
+
+    assert.response(app,
+      { url: '/sendqueryerror' }
+    , function (res) {
+        assert.equal(res.statusCode, 500);
+        assert.ok(~res.body.indexOf("Error: Can't use $fake with String."));
+        done();
+      }
+    );
+
+    assert.response(app,
+      { url: '/sendpromiseerror' }
+    , function (res) {
+        assert.equal(res.statusCode, 500);
+        assert.ok(~res.body.indexOf("Error: splat!"));
+        done();
+      }
+    );
+
+    assert.response(app,
+      { url: '/sendbotherror' }
+    , function (res) {
+        assert.equal(res.statusCode, 500);
+        assert.ok(~res.body.indexOf("Error: splat!"));
+        done();
+      }
+    );
+  }
+
+}

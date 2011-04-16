@@ -1,0 +1,7 @@
+ul
+  - each drumset in query
+    - if ('electronic' == drumset.type)
+      li= drumset.brand
+  - each drumset in promise
+    - if ('black' == drumset.color)
+      li= drumset.brand
