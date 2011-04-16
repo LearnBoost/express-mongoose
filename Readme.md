@@ -9,7 +9,7 @@
 
 ### Example
 
-    In your models:
+  In your models:
 
     User.methods.getLikes = function (callback) {
       // returns a Query
@@ -23,7 +23,7 @@
       return promise;
     };
 
-    In your routes:
+  In your routes:
 
     app.get('/dashboard', function (req, res) {
       var News = db.model('News');
@@ -47,9 +47,10 @@
       });
     });
 
+  Just pass a Query or Promise in and the result will be rendered as json.
+  If an error occurs, the error will be next()ed along as expected.
+
     app.get('/send', function (req, res) {
-      // just pass a Query or Promise in and the result will be rendered as json.
-      // if an error occurs, the error will be next()ed along as expected.
       var News = db.model('News');
       res.send(News.getLatest());
     });
@@ -68,10 +69,10 @@
 
 ### Features
 
- res.render support
- res.partial support
- res.send support
- nested express locals support
+ - res.render support
+ - res.partial support
+ - res.send support
+ - nested express locals support
 
 ### Error handling
 
