@@ -172,6 +172,14 @@ function assignExports () {
       });
     });
 
+    app.get('/renderlocalsonly', function (req, res) {
+      res.render('promise', {
+        locals: {
+          promise: Drumset.usePromise()
+        }
+      });
+    });
+
     app.get('/renderbothnesterror', function (req, res) {
       res.render('both', {
           locals: {
@@ -221,6 +229,14 @@ function assignExports () {
     );
 
     assert.response(app,
+      { url: '/renderlocalsonly' }
+    , { status: 200
+      , body: '<ul><li>Silver Sparkle</li></ul>'
+      }
+    , done
+    );
+
+    assert.response(app,
       { url: '/renderqueryerror' }
     , function (res) {
         assert.equal(res.statusCode, 500);
@@ -265,6 +281,14 @@ function assignExports () {
     app.get('/partialquery', function (req, res) {
       res.partial('query', {
         query: Drumset.useQuery()
+      });
+    });
+
+    app.get('/partiallocalsonly', function (req, res) {
+      res.partial('promise', {
+        locals: {
+          promise: Drumset.usePromise()
+        }
       });
     });
 
@@ -327,6 +351,14 @@ function assignExports () {
       { url: '/partialboth' }
     , { status: 200
       , body: '<ul><li>Roland</li><li>Meinl</li></ul>'
+      }
+    , done
+    );
+
+    assert.response(app,
+      { url: '/partiallocalsonly' }
+    , { status: 200
+      , body: '<ul><li>Silver Sparkle</li></ul>'
       }
     , done
     );
