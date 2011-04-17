@@ -68,11 +68,12 @@ function resolve (options, callback, nested) {
     }
   }
 
-  if (!remaining.length) {
+  pending = remaining.length;
+  if (options.locals) ++pending;
+
+  if (!pending) {
     return callback(null, options);
   }
-
-  pending = remaining.length;
 
   function error (err) {
     if (error.ran) return;
@@ -96,10 +97,8 @@ function resolve (options, callback, nested) {
   if (nested) return;
 
   // locals support
-  var locals = options.locals;
-  if (locals) {
-    ++pending;
-    resolve(locals, function (err, resolved) {
+  if (options.locals) {
+    resolve(options.locals, function (err, resolved) {
       if (err) return error(err);
       options.locals = resolved;
       --pending || callback(null, options);
