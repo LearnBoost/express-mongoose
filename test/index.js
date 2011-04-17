@@ -120,6 +120,20 @@ function makeapp () {
 
 function assignExports () {
 
+  /**
+   * Clean up the test db when finished.
+   */
+
+  var testsrunning = 3;
+  function finishTest () {
+    if (--testsrunning) return;
+    var db = connect();
+    db.db.dropDatabase(function () {
+      db.close();
+    });
+  }
+
+
   exports['test render'] = function () {
     var app = makeapp();
     var db = connect();
@@ -193,7 +207,9 @@ function assignExports () {
 
     var pending = 6;
     function done () {
-      --pending || db.close();
+      if (--pending) return;
+      db.close();
+      finishTest();
     }
 
     assert.response(app,
@@ -328,7 +344,9 @@ function assignExports () {
 
     var pending = 6;
     function done () {
-      --pending || db.close();
+      if (--pending) return;
+      db.close();
+      finishTest();
     }
 
     assert.response(app,
@@ -430,7 +448,9 @@ function assignExports () {
 
     var pending = 6;
     function done () {
-      --pending || db.close();
+      if (--pending) return;
+      db.close();
+      finishTest();
     }
 
     assert.response(app,
