@@ -29,18 +29,20 @@ var DrumsetSchema = new Schema({
 
 DrumsetSchema.statics.useQuery = function () {
   // return a Query
-  return this.find({ color: 'black' });
+  return this.find({ color: 'black' }).sort('_id', 1);
 }
 
 DrumsetSchema.statics.usePromise = function () {
   var promise = new Promise();
-  this.find({ type: 'Acoustic' }, promise.resolve.bind(promise));
+  this.find({ type: 'Acoustic' })
+      .sort('_id', 1)
+      .run(promise.resolve.bind(promise));
   return promise;
 }
 
 DrumsetSchema.statics.queryError = function () {
   // should produce an invalid query error
-  return this.find({ color: { $fake: { $boom: [] }} });
+  return this.find({ color: { $fake: { $boom: [] }} }).sort('_id', 1);
 }
 
 DrumsetSchema.statics.promiseError = function () {
@@ -455,55 +457,82 @@ function assignExports () {
 
     assert.response(app,
       { url: '/sendquery' }
-    , { status: 200
-      , body: '[{"_id":"4da8b662057a83596c000001","type":"electronic","color":"black","brand":"Roland"},{"_id":"4da8b662057a83596c000004","type":"Acoustic","color":"black","brand":"Meinl"}]'
-      , headers: { 'Content-Type': 'application/json' }
+    , function (res) {
+        done();
+
+        assert.equal(res.statusCode, 200);
+        assert.ok(/^application\/json/.test(res.headers['content-type']));
+
+        var body = JSON.parse(res.body);
+
+        assert.ok(!!body);
+        assert.ok(Array.isArray(body));
+        assert.equal(body.length, 2);
+        body.forEach(function (doc) {
+          assert.equal(doc.color, 'black');
+        });
       }
-    , done
     );
 
     assert.response(app,
       { url: '/sendpromise' }
-    , { status: 200
-      , body: '[{"_id":"4da8b662057a83596c000002","type":"Acoustic","color":"Silver Sparkle","brand":"GMS"},{"_id":"4da8b662057a83596c000003","type":"Acoustic","color":"Broken Glass","brand":"DW"},{"_id":"4da8b662057a83596c000004","type":"Acoustic","color":"black","brand":"Meinl"}]'
-      , headers: { 'Content-Type': 'application/json' }
+    , function (res) {
+        done();
+
+        assert.equal(res.statusCode, 200);
+        assert.ok(/^application\/json/.test(res.headers['content-type']));
+
+        var body = JSON.parse(res.body);
+
+        assert.ok(!!body);
+        assert.ok(Array.isArray(body));
+        assert.equal(body.length, 3);
+        body.forEach(function (doc) {
+          assert.equal(doc.type, 'Acoustic');
+        });
       }
-    , done
     );
 
     assert.response(app,
       { url: '/sendboth' }
-    , { status: 200
-      , body: '{"query":[{"_id":"4da8b662057a83596c000001","type":"electronic","color":"black","brand":"Roland"},{"_id":"4da8b662057a83596c000004","type":"Acoustic","color":"black","brand":"Meinl"}],"promise":[{"_id":"4da8b662057a83596c000002","type":"Acoustic","color":"Silver Sparkle","brand":"GMS"},{"_id":"4da8b662057a83596c000003","type":"Acoustic","color":"Broken Glass","brand":"DW"},{"_id":"4da8b662057a83596c000004","type":"Acoustic","color":"black","brand":"Meinl"}]}'
-      , headers: { 'Content-Type': 'application/json' }
+    , function (res) {
+        done();
+
+        assert.equal(res.statusCode, 200);
+        assert.ok(/^application\/json/.test(res.headers['content-type']));
+
+        var body = JSON.parse(res.body);
+
+        assert.ok(!!body);
+        assert.equal(body.query.length, 2);
+        assert.equal(body.promise.length, 3);
       }
-    , done
     );
 
     assert.response(app,
       { url: '/sendqueryerror' }
     , function (res) {
+        done();
         assert.equal(res.statusCode, 500);
         assert.ok(~res.body.indexOf("Error: Can't use $fake with String."));
-        done();
       }
     );
 
     assert.response(app,
       { url: '/sendpromiseerror' }
     , function (res) {
+        done();
         assert.equal(res.statusCode, 500);
         assert.ok(~res.body.indexOf("Error: splat!"));
-        done();
       }
     );
 
     assert.response(app,
       { url: '/sendbotherror' }
     , function (res) {
+        done();
         assert.equal(res.statusCode, 500);
         assert.ok(~res.body.indexOf("Error: splat!"));
-        done();
       }
     );
   }
