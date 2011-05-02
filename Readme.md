@@ -1,5 +1,5 @@
 
-# Express-mongoose
+<img src="https://github.com/LearnBoost/express-mongoose/raw/master/express-mongoose.png"/>
 
  Express-mongoose adds Mongoose Query and Promise support to Express render, partial, and send methods.
 
