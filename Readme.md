@@ -87,8 +87,6 @@
 
   - [Aaron Heckmann (aheckmann)](http://github.com/aheckmann)
 
-## More Information
-
 ## License
 
 (The MIT License)
