@@ -78,6 +78,11 @@
 
  If a Query or Promise resolves to an error it will be forwarded on with `next(err)` as expected.
 
+### Compatibility
+
+  - Express: 2.x
+  - Mongoose: 1.x
+
 ## Authors
 
   - [Aaron Heckmann (aheckmann)](http://github.com/aheckmann)
