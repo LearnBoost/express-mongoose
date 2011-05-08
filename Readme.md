@@ -47,7 +47,7 @@
       });
     });
 
-  Just pass a Query or Promise in and the result will be rendered as json.
+  With `res.send` support you can pass a Query or Promise and the result will be rendered as json.
   If an error occurs, the error will be next()ed along as expected.
 
     app.get('/send', function (req, res) {
@@ -72,7 +72,7 @@
  - res.render support
  - res.partial support
  - res.send support
- - nested express locals support
+ - nested locals support
 
 ### Error handling
 
