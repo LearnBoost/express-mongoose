@@ -1,7 +1,7 @@
 {
   "name": "express-mongoose"
 , "description": "Adds Mongoose Promise/Query support to Express rendering."
-, "version": "0.0.1"
+, "version": "0.0.2"
 , "author": "Aaron Heckmann <aaron@learnboost.com>"
 , "keywords": ["express", "mongoose", "mongo", "render", "promise", "query"]
 , "homepage": "https://github.com/learnboost/express-mongoose"
