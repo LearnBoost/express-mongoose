@@ -5,7 +5,10 @@
 , "author": "Aaron Heckmann <aaron@learnboost.com>"
 , "keywords": ["express", "mongoose", "mongo", "render", "promise", "query"]
 , "homepage": "https://github.com/learnboost/express-mongoose"
-, "dependencies": {}
+, "dependencies": {
+      "mongoose": ">= 1.0.0"
+    , "express": ">= 2.0.0"
+  }
 , "main": "index"
 , "engines": { "node": ">= 0.2.0" }
 , "repository": {
