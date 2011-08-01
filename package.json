@@ -6,11 +6,11 @@
 , "keywords": ["express", "mongoose", "mongo", "render", "promise", "query"]
 , "homepage": "https://github.com/learnboost/express-mongoose"
 , "dependencies": {
-      "mongoose": ">= 1.0.0"
-    , "express": ">= 2.0.0"
   }
 , "devDependencies": {
-    "should": "0.2.1"
+      "should": "0.2.1"
+    , "mongoose": ">= 1.0.0"
+    , "express": ">= 2.0.0"
   }
 , "main": "index"
 , "engines": { "node": ">= 0.2.0" }
