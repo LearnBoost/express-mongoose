@@ -196,6 +196,14 @@ function assignExports () {
       });
     });
 
+    app.get('/renderlocalsonlynest', function (req, res) {
+      res.render('nested', {
+        locals: {
+            title: 'yes'
+        }
+      });
+    });
+
     app.get('/renderbothnesterror', function (req, res) {
       res.render('both', {
           locals: {
@@ -207,7 +215,7 @@ function assignExports () {
 
     // test
 
-    var pending = 6;
+    var pending = 7;
     function done () {
       if (--pending) return;
       db.close();
@@ -250,6 +258,14 @@ function assignExports () {
       { url: '/renderlocalsonly' }
     , { status: 200
       , body: '<ul><li>Silver Sparkle</li></ul>'
+      }
+    , done
+    );
+
+    assert.response(app,
+      { url: '/renderlocalsonlynest' }
+    , { status: 200
+      , body: '<ul><li>yes</li></ul>'
       }
     , done
     );

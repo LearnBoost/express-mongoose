@@ -98,10 +98,11 @@ function resolve (options, callback, nested) {
 
   // locals support
   if (options.locals) {
-    resolve(options.locals, function (err, resolved) {
+    return resolve(options.locals, function (err, resolved) {
       if (err) return error(err);
       options.locals = resolved;
-      --pending || callback(null, options);
+      if (--pending) return;
+      return callback(null, options);
     }, true);
   }
 
