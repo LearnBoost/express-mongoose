@@ -1,4 +1,9 @@
 
+0.0.4 / 2011-09-16
+==================
+
+  * version bump to fix npm caching the old publish
+
 0.0.3 / 2011-09-13
 ==================
 
