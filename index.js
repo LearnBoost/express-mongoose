@@ -14,9 +14,9 @@ exports.version = '0.0.4';
  * Module dependencies.
  */
 
-const res = require('http').ServerResponse.prototype
-    , Promise = require('mongoose').Promise
-    , Query = require('mongoose').Query;
+var res = require('http').ServerResponse.prototype
+  , Promise = require('mongoose').Promise
+  , Query = require('mongoose').Query
 
 /**
  * Wrap the original rendering methods with support
