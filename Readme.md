@@ -1,4 +1,3 @@
-
 <img src="https://github.com/LearnBoost/express-mongoose/raw/master/express-mongoose.png"/>
 
  Express-mongoose adds Mongoose Query and Promise support to Express render, partial, and send methods.
@@ -9,14 +8,14 @@
 
 ### Example
 
-  In your models:
+  In your schemas:
 
-    User.methods.getLikes = function (callback) {
+    UserSchema.methods.getLikes = function (callback) {
       // returns a Query
       return this.model('Likes').find({ _user: this._id }, callback);
     };
 
-    News.statics.getLatest = function (callback) {
+    NewsSchema.statics.getLatest = function (callback) {
       var promise = new Promise;
       if (callback) promise.addBack(callback);
       this.find({ datePublished: { $gt: new Date(Date.now() - 60000*60) } }, promise.resolve.bind(promise));
