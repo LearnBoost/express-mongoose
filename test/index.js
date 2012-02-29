@@ -51,6 +51,15 @@ DrumsetSchema.statics.promiseError = function () {
   return promise;
 }
 
+DrumsetSchema.statics.usePromiseRedirect = function (status) {
+  var url = '/promise/redirect';
+  var promise = new Promise;
+  process.nextTick(function () {
+    promise.complete(url, status);
+  });
+  return promise;
+}
+
 mongoose.model('Drumset', DrumsetSchema);
 
 /**
@@ -126,12 +135,14 @@ function assignExports () {
    * Clean up the test db when finished.
    */
 
-  var testsrunning = 3;
+  var testsrunning = 4;
   function finishTest () {
     if (--testsrunning) return;
     var db = connect();
-    db.db.dropDatabase(function () {
-      db.close();
+    db.once('open', function () {
+      db.db.dropDatabase(function () {
+        db.close();
+      });
     });
   }
 
@@ -221,6 +232,8 @@ function assignExports () {
       db.close();
       finishTest();
     }
+
+    app.setMaxListeners(0);
 
     assert.response(app,
       { url: '/renderquery' }
@@ -551,6 +564,111 @@ function assignExports () {
         assert.ok(~res.body.indexOf("Error: splat!"));
       }
     );
-  }
+  };
 
+  exports.redirect = function () {
+    var app = makeapp();
+    var db = connect();
+    var Drumset = db.model('Drumset', collection);
+
+    app.get('/redirect', function (req, res) {
+      res.redirect('/sound');
+    });
+
+    app.get('/redirect/status', function (req, res) {
+      res.redirect('/sound', 301);
+    });
+
+    app.get('/redirectpromise', function (req, res) {
+      res.redirect(Drumset.usePromiseRedirect());
+    });
+
+    app.get('/redirectpromise/status', function (req, res) {
+      res.redirect(Drumset.usePromiseRedirect(), 301);
+    });
+
+    app.get('/redirectpromisestatus', function (req, res) {
+      res.redirect(Drumset.usePromiseRedirect(301));
+    });
+
+    app.get('/redirectpromisestatus/override', function (req, res) {
+      res.redirect(Drumset.usePromiseRedirect(301), 500);
+    });
+
+    app.get('/redirectpromiseerror', function (req, res) {
+      res.redirect(Drumset.promiseError());
+    });
+
+    // test
+
+    var pending = 7;
+    function done () {
+      if (--pending) return;
+      db.close();
+      finishTest();
+    }
+
+    assert.response(app,
+      { url: '/redirect' }
+    , function (res) {
+        done();
+        assert.equal(res.statusCode, 302);
+        assert.ok('/sound', res.headers['Location']);
+      }
+    );
+
+    assert.response(app,
+      { url: '/redirect/status' }
+    , function (res) {
+        done();
+        assert.equal(res.statusCode, 301);
+        assert.ok('/sound', res.headers['Location']);
+      }
+    );
+
+    assert.response(app,
+      { url: '/redirectpromise' }
+    , function (res) {
+        done();
+        assert.equal(res.statusCode, 302);
+        assert.ok('/redirect/promise', res.headers['Location']);
+      }
+    );
+
+    assert.response(app,
+      { url: '/redirectpromise/status' }
+    , function (res) {
+        done();
+        assert.equal(res.statusCode, 301);
+        assert.ok('/redirect/promise', res.headers['Location']);
+      }
+    );
+
+    assert.response(app,
+      { url: '/redirectpromisestatus' }
+    , function (res) {
+        done();
+        assert.equal(res.statusCode, 301);
+        assert.ok('/redirect/promise', res.headers['Location']);
+      }
+    );
+
+    assert.response(app,
+      { url: '/redirectpromisestatus/override' }
+    , function (res) {
+        done();
+        assert.equal(res.statusCode, 301);
+        assert.ok('/redirect/promise', res.headers['Location']);
+      }
+    );
+
+    assert.response(app,
+      { url: '/redirectpromiseerror' }
+    , function (res) {
+        done();
+        assert.equal(res.statusCode, 500);
+        assert.ok(/splat!/.test(res.body));
+      }
+    );
+  }
 }

@@ -112,14 +112,13 @@ function resolve (options, callback, nested) {
  * Add Promise/Query support to res.send.
  */
 
-var oldsend = res.send;
-
+var send = res.send;
 res.send = function (body, headers, status) {
   var self = this;
 
   function handleResult (err, result) {
     if (err) return self.req.next(err);
-    oldsend.call(self, result, headers, status);
+    send.call(self, result, headers, status);
   }
 
   if (body instanceof Promise) {
@@ -134,5 +133,45 @@ res.send = function (body, headers, status) {
     return resolve(body, handleResult);
   }
 
-  oldsend.call(this, body, headers, status);
+  send.call(this, body, headers, status);
 };
+
+/**
+ * Extends res.redirect with mongoose Promise support.
+ *
+ * Does not accept Queries since those return documents.
+ * Instead, manually handle the result of your query first,
+ * then resolve your promise with the url and optional status.
+ *
+ *     var promise = new mongoose.Promise;
+ *     res.redirect(promise);
+ *
+ *     // later...
+ *     promise.complete(url [, status]);
+ *
+ * The promise can pass an optional status code as the
+ * second argument.
+ *
+ *     promise.complete('/elsewhere', 301);
+ */
+
+var redirect = res.redirect;
+res.redirect = function (url, status) {
+  var self = this;
+
+  function handleResult (err, result, code) {
+    if (err) return self.req.next(err);
+
+    if ('string' != typeof result) {
+      return self.req.next(new Error('URL Expected'));
+    }
+
+    redirect.call(self, result, code || status);
+  }
+
+  if (url instanceof Promise) {
+    return url.addBack(handleResult);
+  }
+
+  redirect.call(this, url, status);
+}

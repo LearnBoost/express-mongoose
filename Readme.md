@@ -1,6 +1,19 @@
 <img src="https://github.com/LearnBoost/express-mongoose/raw/master/express-mongoose.png"/>
 
- Express-mongoose adds Mongoose Query and Promise support to Express render, partial, and send methods.
+Express-mongoose adds Mongoose Query and Promise support to Express.
+
+Methods which now support Promises:
+
+   - `res.render`
+   - `res.partial`
+   - `res.send`
+   - `res.redirect`
+
+Methods which now support Queries:
+
+   - `res.render`
+   - `res.partial`
+   - `res.send`
 
 ## Installation
 
@@ -8,7 +21,7 @@
 
 ### Example
 
-  In your schemas:
+In your schemas:
 
     UserSchema.methods.getLikes = function (callback) {
       // returns a Query
@@ -22,7 +35,7 @@
       return promise;
     };
 
-  In your routes:
+In your routes:
 
     app.get('/dashboard', function (req, res) {
       var News = db.model('News');
@@ -46,8 +59,8 @@
       });
     });
 
-  With `res.send` support you can pass a Query or Promise and the result will be rendered as json.
-  If an error occurs, the error will be next()ed along as expected.
+With `res.send` support you can pass a Query or Promise and the result will be rendered as json.
+If an error occurs, the error will be next()ed along as expected.
 
     app.get('/send', function (req, res) {
       var News = db.model('News');
@@ -66,11 +79,25 @@
       });
     });
 
+`res.redirect` accepts a `Promise` as well.
+
+    app.get('/redirect', function (req, res) {
+      var promise = new Promise;
+      res.redirect(promise);
+
+      process.nextTick(function () {
+        promise.complete(url [, status]);
+        // or
+        promise.error(new Error('uh oh'));
+      });
+    });
+
 ### Features
 
  - res.render support
  - res.partial support
  - res.send support
+ - res.redirect support
  - nested locals support
 
 ### Error handling

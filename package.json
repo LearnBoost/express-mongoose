@@ -11,6 +11,8 @@
       "should": "0.2.1"
     , "mongoose": ">= 1.0.0"
     , "express": ">= 2.0.0"
+    , "jade": ">= 0.20.3"
+    , "expresso": ">= 0.9.2"
   }
 , "main": "index"
 , "engines": { "node": ">= 0.2.0" }
