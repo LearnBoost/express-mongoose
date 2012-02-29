@@ -1,4 +1,10 @@
 
+0.0.5 / 2012-02-29
+==================
+
+  * added; support for res.redirect
+  * fixed; removed use of `const`
+
 0.0.4 / 2011-09-16
 ==================
 
