@@ -1,10 +1,6 @@
 
 test:
-	@NODE_ENV=test ./support/expresso/bin/expresso \
-		-I lib \
-		-I support \
-		-I support/connect/lib \
-		-I support/jade/lib \
+	@NODE_ENV=test ./node_modules/expresso/bin/expresso \
 		test/index.js
 
 .PHONY: test

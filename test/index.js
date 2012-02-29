@@ -222,6 +222,8 @@ function assignExports () {
       finishTest();
     }
 
+    app.setMaxListeners(0);
+
     assert.response(app,
       { url: '/renderquery' }
     , { status: 200
