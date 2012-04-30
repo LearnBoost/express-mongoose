@@ -1,6 +1,6 @@
 <img src="https://github.com/LearnBoost/express-mongoose/raw/master/express-mongoose.png"/>
 
-Express-mongoose adds Mongoose Query and Promise support to Express.
+Express-mongoose adds [Mongoose](http://mongoosejs.com) Query and Promise support to [Express](http://expressjs.com).
 
 Methods which now support Promises:
 
