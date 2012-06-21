@@ -36,7 +36,7 @@ DrumsetSchema.statics.usePromise = function () {
   var promise = new Promise();
   this.find({ type: 'Acoustic' })
       .sort('_id', 1)
-      .run(promise.resolve.bind(promise));
+      .exec(promise.resolve.bind(promise));
   return promise;
 }
 
