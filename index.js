@@ -88,7 +88,7 @@ function resolve (options, callback, nested) {
     }
 
     if (item instanceof Query) {
-      item.run(handleResult);
+      item.exec(handleResult);
     } else {
       item.addBack(handleResult);
     }
@@ -126,7 +126,7 @@ res.send = function (body, headers, status) {
   }
 
   if (body instanceof Query) {
-    return body.run(handleResult);
+    return body.exec(handleResult);
   }
 
   if ('Object' == body.constructor.name) {
