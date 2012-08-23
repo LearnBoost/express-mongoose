@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/LearnBoost/express-mongoose.png)](http://travis-ci.org/LearnBoost/express-mongoose)
 <img src="https://github.com/LearnBoost/express-mongoose/raw/master/express-mongoose.png"/>
 
 Express-mongoose adds Mongoose Query and Promise support to Express.
