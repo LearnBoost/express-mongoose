@@ -15,22 +15,23 @@ exports.version = '0.0.4';
  */
 
 var res = require('http').ServerResponse.prototype
+  , express = require('express')
   , Promise = require('mongoose').Promise
   , Query = require('mongoose').Query
+  , slice = require('sliced')
 
 /**
  * Wrap the original rendering methods with support
  * for Queries and Promises.
  */
 
-res.render = wrap(res.render);
-res.partial = wrap(res.partial);
+express.response.render = wrap(express.response.render);
 
 function wrap (method) {
-  return function expressmongoose (view, options, callback, parent, sub) {
+  return function expressmongoose (view, options, callback) {
 
     if (!options || 'function' == typeof options) {
-      return method.call(this, view, options, callback, parent, sub);
+      return method.call(this, view, options, callback);
     }
 
     var self = this;
@@ -42,7 +43,7 @@ function wrap (method) {
       }
 
       // must return here so partials always work
-      return method.call(self, view, result, callback, parent, sub);
+      return method.call(self, view, result, callback);
     });
   }
 }
@@ -105,35 +106,36 @@ function resolve (options, callback, nested) {
       return callback(null, options);
     }, true);
   }
-
 }
 
 /**
  * Add Promise/Query support to res.send.
  */
 
-var send = res.send;
-res.send = function (body, headers, status) {
+var send = express.response.send;
+express.response.send = function expressmongoose_send () {
+  var args = slice(arguments);
   var self = this;
 
   function handleResult (err, result) {
     if (err) return self.req.next(err);
-    send.call(self, result, headers, status);
+    args[0] = result;
+    send.apply(self, args);
   }
 
-  if (body instanceof Promise) {
-    return body.addBack(handleResult);
+  if (args[0] instanceof Promise) {
+    return args[0].addBack(handleResult);
   }
 
-  if (body instanceof Query) {
-    return body.exec(handleResult);
+  if (args[0] instanceof Query) {
+    return args[0].exec(handleResult);
   }
 
-  if ('Object' == body.constructor.name) {
-    return resolve(body, handleResult);
+  if ('Object' == args[0].constructor.name) {
+    return resolve(args[0], handleResult);
   }
 
-  send.call(this, body, headers, status);
+  send.apply(this, args);
 };
 
 /**
@@ -149,29 +151,36 @@ res.send = function (body, headers, status) {
  *     // later...
  *     promise.complete(url [, status]);
  *
- * The promise can pass an optional status code as the
+ * The promise may pass an optional status code as the
  * second argument.
  *
  *     promise.complete('/elsewhere', 301);
  */
 
-var redirect = res.redirect;
-res.redirect = function (url, status) {
+// TODO
+var redirect = express.response.redirect;
+express.response.redirect = function () {
   var self = this;
+  var args = slice(arguments);
 
-  function handleResult (err, result, code) {
+  function handleResult (err, url, code) {
     if (err) return self.req.next(err);
 
-    if ('string' != typeof result) {
+    if ('string' != typeof url) {
       return self.req.next(new Error('URL Expected'));
     }
 
-    redirect.call(self, result, code || status);
+    args[0] = url;
+    if (code) args[1] = code;
+    redirect.apply(self, args);
   }
 
-  if (url instanceof Promise) {
-    return url.addBack(handleResult);
+  if (args[0] instanceof Promise) {
+    return args[0].addBack(handleResult);
   }
 
-  redirect.call(this, url, status);
+  redirect.apply(this, args);
 }
+
+// TODO res.json
+// TODO res.jsonp

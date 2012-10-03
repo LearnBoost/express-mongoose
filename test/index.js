@@ -6,9 +6,10 @@
 const mongoose = require('mongoose')
     , express = require('express')
     , assert = require('assert')
-    , should = require('should')
     , Promise = mongoose.Promise
     , Schema = mongoose.Schema
+    , http = require('http')
+    , request = require('superagent')
 
 require('../');
 
@@ -29,20 +30,20 @@ var DrumsetSchema = new Schema({
 
 DrumsetSchema.statics.useQuery = function () {
   // return a Query
-  return this.find({ color: 'black' }).sort('_id', 1);
+  return this.find({ color: 'black' }).sort('_id');
 }
 
 DrumsetSchema.statics.usePromise = function () {
   var promise = new Promise();
   this.find({ type: 'Acoustic' })
-      .sort('_id', 1)
+      .sort('_id')
       .exec(promise.resolve.bind(promise));
   return promise;
 }
 
 DrumsetSchema.statics.queryError = function () {
   // should produce an invalid query error
-  return this.find({ color: { $fake: { $boom: [] }} }).sort('_id', 1);
+  return this.find({ color: { $fake: { $boom: [] }} }).sort('_id');
 }
 
 DrumsetSchema.statics.promiseError = function () {
@@ -63,6 +64,17 @@ DrumsetSchema.statics.usePromiseRedirect = function (status) {
 mongoose.model('Drumset', DrumsetSchema);
 
 /**
+ * Creates a test server.
+ */
+
+function makeapp () {
+  var app = express();
+  app.set('views', __dirname + '/fixtures');
+  app.set('view engine', 'jade');
+  return app;
+}
+
+/**
  * Mongoose connection helper.
  */
 
@@ -70,605 +82,410 @@ function connect () {
   return mongoose.createConnection('mongodb://localhost/express_goose_test');
 }
 
-/**
- * Dummy data.
- */
+describe('express-mongoose', function(){
+  var collection = 'drumsets_' + (Math.random() * 100000 | 0);
+  var db, Drumset;
 
-var db = connect();
-var collection = 'drumsets_' + (Math.random() * 100000 | 0);
-var Drumset = db.model('Drumset', collection);
-var pending = 4;
+  before(function(done){
+    // add dummy data
+    db = connect();
+    Drumset = db.model('Drumset', collection);
+    var pending = 4;
 
-Drumset.create({
-    brand: 'Roland'
-  , color: 'black'
-  , type: 'electronic'
-  , _id: '4da8b662057a83596c000001'
-}, added);
+    Drumset.create({
+        brand: 'Roland'
+      , color: 'black'
+      , type: 'electronic'
+      , _id: '4da8b662057a83596c000001'
+    }, added);
 
-Drumset.create({
-    brand: 'GMS'
-  , color: 'Silver Sparkle'
-  , type: 'Acoustic'
-  , _id: '4da8b662057a83596c000002'
-}, added);
+    Drumset.create({
+        brand: 'GMS'
+      , color: 'Silver Sparkle'
+      , type: 'Acoustic'
+      , _id: '4da8b662057a83596c000002'
+    }, added);
 
-Drumset.create({
-    brand: 'DW'
-  , color: 'Broken Glass'
-  , type: 'Acoustic'
-  , _id: '4da8b662057a83596c000003'
-}, added);
+    Drumset.create({
+        brand: 'DW'
+      , color: 'Broken Glass'
+      , type: 'Acoustic'
+      , _id: '4da8b662057a83596c000003'
+    }, added);
 
-Drumset.create({
-    brand: 'Meinl'
-  , color: 'black'
-  , type: 'Acoustic'
-  , _id: '4da8b662057a83596c000004'
-}, added);
+    Drumset.create({
+        brand: 'Meinl'
+      , color: 'black'
+      , type: 'Acoustic'
+      , _id: '4da8b662057a83596c000004'
+    }, added);
 
-function added (err) {
-  if (err) return console.error(err);
-  if (--pending) return;
-  db.close();
-  assignExports();
-}
+    function added (err) {
+      if (added.err) return;
 
-/**
- * Creates a test server.
- */
-
-function makeapp () {
-  var app = express.createServer();
-  app.set('views', __dirname + '/fixtures');
-  app.set('view engine', 'jade');
-  return app;
-}
-
-/**
- * DB is ready, export our expresso tests.
- */
-
-function assignExports () {
-
-  /**
-   * Clean up the test db when finished.
-   */
-
-  var testsrunning = 4;
-  function finishTest () {
-    if (--testsrunning) return;
-    var db = connect();
-    db.once('open', function () {
-      db.db.dropDatabase(function () {
+      if (err) {
         db.close();
+        return done(added.err = err);
+      }
+
+      if (--pending) return;
+      done();
+    }
+  })
+
+  after(function(done){
+    // clean up the test db
+    db.db.dropDatabase(function () {
+      db.close();
+      done();
+    });
+  })
+
+  function test (routes, next) {
+    var app = makeapp();
+
+    Object.keys(routes).forEach(function (route) {
+      app.get(route, routes[route]);
+    })
+
+    // error handler
+    app.use(function (err, req, res, next) {
+      res.statusCode = 500;
+      res.send(err.stack);
+    })
+
+    var server = http.Server(app);
+    var address;
+
+    before(function (done) {
+      server.listen(0, function () {
+        address = server.address();
+        done();
       });
     });
+
+    after(function (done) {
+      server.close(done);
+    })
+
+    next(function req (path, cb) {
+      var url = 'http://' + address.address + ':' + address.port + path;
+      return request.get(url, cb);
+    })
   }
 
+  describe('render', function(){
+    var routes = {};
 
-  exports['test render'] = function () {
-    var app = makeapp();
-    var db = connect();
-    var Drumset = db.model('Drumset', collection);
-
-    app.get('/renderquery', function (req, res) {
+    routes['/renderquery'] = function (req, res) {
       res.render('query', {
         query: Drumset.useQuery()
       });
-    });
+    }
 
-    app.get('/renderpromise', function (req, res) {
+    routes['/renderpromise'] = function (req, res) {
       res.render('promise', {
         promise: Drumset.usePromise()
       });
-    });
+    }
 
-    app.get('/renderboth', function (req, res) {
+    routes['/renderboth'] = function (req, res) {
       res.render('both', {
           query: Drumset.useQuery()
         , promise: Drumset.usePromise()
       });
-    });
+    }
 
-    app.get('/renderqueryerror', function (req, res) {
+    routes['/renderqueryerror'] = function (req, res) {
       res.render('query', {
         query: Drumset.queryError()
       });
-    });
+    }
 
-    app.get('/renderpromiseerror', function (req, res) {
+    routes['/renderpromiseerror'] = function (req, res) {
       res.render('promise', {
         promise: Drumset.promiseError()
       });
-    });
+    }
 
-    app.get('/renderbotherror', function (req, res) {
+    routes['/renderbotherror'] = function (req, res) {
       res.render('both', {
           query: Drumset.queryError()
         , promise: Drumset.promiseError()
       });
-    });
+    }
 
-    app.get('/renderbothnest', function (req, res) {
-      res.render('both', {
-          locals: {
-            promise: Drumset.usePromise()
-          }
-        , query: Drumset.useQuery()
-      });
-    });
-
-    app.get('/renderlocalsonly', function (req, res) {
-      res.render('promise', {
-        locals: {
-          promise: Drumset.usePromise()
-        }
-      });
-    });
-
-    app.get('/renderlocalsonlynest', function (req, res) {
+    routes['/renderlocalsonlynest'] = function (req, res) {
       res.render('nested', {
-        locals: {
-            title: 'yes'
-        }
+        title: 'yes'
       });
-    });
-
-    app.get('/renderbothnesterror', function (req, res) {
-      res.render('both', {
-          locals: {
-            query: Drumset.queryError()
-          }
-        , promise: Drumset.usePromise()
-      });
-    });
-
-    // test
-
-    var pending = 7;
-    function done () {
-      if (--pending) return;
-      db.close();
-      finishTest();
     }
 
-    app.setMaxListeners(0);
+    test(routes, function (req) {
+      it('/renderquery', function(done){
+        req('/renderquery', function (res) {
+          assert.equal(200, res.status);
+          assert.equal('<ul><li>Roland</li></ul>', res.text);
+          done();
+        })
+      })
 
-    assert.response(app,
-      { url: '/renderquery' }
-    , { status: 200
-      , body: '<ul><li>Roland</li></ul>'
-      }
-    , done
-    );
+      it('/renderpromise', function(done){
+        req('/renderpromise', function (res) {
+          assert.equal(200, res.status);
+          assert.equal('<ul><li>Silver Sparkle</li></ul>', res.text);
+          done();
+        })
+      })
 
-    assert.response(app,
-      { url: '/renderpromise' }
-    , { status: 200
-      , body: '<ul><li>Silver Sparkle</li></ul>'
-      }
-    , done
-    );
+      it('/renderboth', function(done){
+        req('/renderboth', function (res) {
+          assert.equal(200, res.status);
+          assert.equal('<ul><li>Roland</li><li>Meinl</li></ul>', res.text);
+          done();
+        })
+      })
 
-    assert.response(app,
-      { url: '/renderboth' }
-    , { status: 200
-      , body: '<ul><li>Roland</li><li>Meinl</li></ul>'
-      }
-    , done
-    );
+      it('/renderlocalsonlynest', function(done){
+        req('/renderlocalsonlynest', function (res) {
+          assert.equal(200, res.status);
+          assert.equal('<ul><li>yes</li></ul>', res.text);
+          done();
+        })
+      })
 
-    assert.response(app,
-      { url: '/renderbothnest' }
-    , { status: 200
-      , body: '<ul><li>Roland</li><li>Meinl</li></ul>'
-      }
-    , done
-    );
+      it('/renderqueryerror', function(done){
+        req('/renderqueryerror', function (res) {
+          assert.equal(500, res.status);
+          assert.ok(~res.text.indexOf("Error: Can't use $fake with String."));
+          done();
+        })
+      })
 
-    assert.response(app,
-      { url: '/renderlocalsonly' }
-    , { status: 200
-      , body: '<ul><li>Silver Sparkle</li></ul>'
-      }
-    , done
-    );
+      it('/renderpromiseerror', function(done){
+        req('/renderpromiseerror', function (res) {
+          assert.equal(500, res.status);
+          assert.ok(~res.text.indexOf("Error: splat!"));
+          done();
+        });
+      })
 
-    assert.response(app,
-      { url: '/renderlocalsonlynest' }
-    , { status: 200
-      , body: '<ul><li>yes</li></ul>'
-      }
-    , done
-    );
+      it('/renderbotherror', function(done){
+        req('/renderbotherror', function (res) {
+          assert.equal(500, res.status);
+          assert.ok(~res.text.indexOf("Error: splat!"));
+          done();
+        });
+      })
+    })
+  })
 
-    assert.response(app,
-      { url: '/renderqueryerror' }
-    , function (res) {
-        assert.equal(res.statusCode, 500);
-        assert.ok(~res.body.indexOf("Error: Can't use $fake with String."));
-        done();
-      }
-    );
+  describe('send', function(){
+    var routes = {}
 
-    assert.response(app,
-      { url: '/renderpromiseerror' }
-    , function (res) {
-        assert.equal(res.statusCode, 500);
-        assert.ok(~res.body.indexOf("Error: splat!"));
-        done();
-      }
-    );
-
-    assert.response(app,
-      { url: '/renderbotherror' }
-    , function (res) {
-        assert.equal(res.statusCode, 500);
-        assert.ok(~res.body.indexOf("Error: splat!"));
-        done();
-      }
-    );
-
-    assert.response(app,
-      { url: '/renderbothnesterror' }
-    , function (res) {
-        assert.equal(res.statusCode, 500);
-        assert.ok(~res.body.indexOf("Error: Can't use $fake with String."));
-        done();
-      }
-    );
-  };
-
-  exports['test partial'] = function () {
-    var app = makeapp();
-    var db = connect();
-    var Drumset = db.model('Drumset', collection);
-
-    app.get('/partialquery', function (req, res) {
-      res.partial('query', {
-        query: Drumset.useQuery()
-      });
-    });
-
-    app.get('/partiallocalsonly', function (req, res) {
-      res.partial('promise', {
-        locals: {
-          promise: Drumset.usePromise()
-        }
-      });
-    });
-
-    app.get('/partialpromise', function (req, res) {
-      res.partial('promise', {
-        promise: Drumset.usePromise()
-      });
-    });
-
-    app.get('/partialboth', function (req, res) {
-      res.partial('both', {
-          query: Drumset.useQuery()
-        , promise: Drumset.usePromise()
-      });
-    });
-
-    app.get('/partialqueryerror', function (req, res) {
-      res.partial('query', {
-        query: Drumset.queryError()
-      });
-    });
-
-    app.get('/partialpromiseerror', function (req, res) {
-      res.partial('promise', {
-        promise: Drumset.promiseError()
-      });
-    });
-
-    app.get('/partialbotherror', function (req, res) {
-      res.partial('both', {
-          query: Drumset.queryError()
-        , promise: Drumset.promiseError()
-      });
-    });
-
-    // test
-
-    var pending = 6;
-    function done () {
-      if (--pending) return;
-      db.close();
-      finishTest();
-    }
-
-    assert.response(app,
-      { url: '/partialquery' }
-    , { status: 200
-      , body: '<ul><li>Roland</li></ul>'
-      }
-    , done
-    );
-
-    assert.response(app,
-      { url: '/partialpromise' }
-    , { status: 200
-      , body: '<ul><li>Silver Sparkle</li></ul>'
-      }
-    , done
-    );
-
-    assert.response(app,
-      { url: '/partialboth' }
-    , { status: 200
-      , body: '<ul><li>Roland</li><li>Meinl</li></ul>'
-      }
-    , done
-    );
-
-    assert.response(app,
-      { url: '/partiallocalsonly' }
-    , { status: 200
-      , body: '<ul><li>Silver Sparkle</li></ul>'
-      }
-    , done
-    );
-
-    assert.response(app,
-      { url: '/partialqueryerror' }
-    , function (res) {
-        assert.equal(res.statusCode, 500);
-        assert.ok(~res.body.indexOf("Error: Can't use $fake with String."));
-        done();
-      }
-    );
-
-    assert.response(app,
-      { url: '/partialpromiseerror' }
-    , function (res) {
-        assert.equal(res.statusCode, 500);
-        assert.ok(~res.body.indexOf("Error: splat!"));
-        done();
-      }
-    );
-
-    assert.response(app,
-      { url: '/partialbotherror' }
-    , function (res) {
-        assert.equal(res.statusCode, 500);
-        assert.ok(~res.body.indexOf("Error: splat!"));
-        done();
-      }
-    );
-  };
-
-  exports['test send'] = function () {
-    var app = makeapp();
-    var db = connect();
-    var Drumset = db.model('Drumset', collection);
-
-    app.get('/sendquery', function (req, res) {
+    routes['/sendquery'] = function (req, res) {
       res.send(Drumset.useQuery());
-    });
+    }
 
-    app.get('/sendpromise', function (req, res) {
+    routes['/sendpromise'] = function (req, res) {
       res.send(Drumset.usePromise());
-    });
+    }
 
-    app.get('/sendboth', function (req, res) {
+    routes['/sendboth'] = function (req, res) {
       res.send({
           query: Drumset.useQuery()
         , promise: Drumset.usePromise()
       });
-    });
+    }
 
-    app.get('/sendqueryerror', function (req, res) {
+    routes['/sendqueryerror'] = function (req, res) {
       res.send(Drumset.queryError());
-    });
+    }
 
-    app.get('/sendpromiseerror', function (req, res) {
+    routes['/sendpromiseerror'] = function (req, res) {
       res.send(Drumset.promiseError());
-    });
+    }
 
-    app.get('/sendbotherror', function (req, res) {
+    routes['/sendbotherror'] = function (req, res) {
       res.send({
           query: Drumset.queryError()
         , promise: Drumset.promiseError()
       });
-    });
-
-    // test
-
-    var pending = 6;
-    function done () {
-      if (--pending) return;
-      db.close();
-      finishTest();
     }
 
-    assert.response(app,
-      { url: '/sendquery' }
-    , function (res) {
-        done();
+    test(routes, function (req) {
+      it('/sendquery', function(done){
+        req('/sendquery', function (res) {
+          assert.equal(res.status, 200);
+          assert.ok(/^application\/json/.test(res.headers['content-type']));
 
-        assert.equal(res.statusCode, 200);
-        assert.ok(/^application\/json/.test(res.headers['content-type']));
+          var body = JSON.parse(res.text);
 
-        var body = JSON.parse(res.body);
+          assert.ok(!!body);
+          assert.ok(Array.isArray(body));
+          assert.equal(body.length, 2);
+          body.forEach(function (doc) {
+            assert.equal(doc.color, 'black');
+          });
 
-        assert.ok(!!body);
-        assert.ok(Array.isArray(body));
-        assert.equal(body.length, 2);
-        body.forEach(function (doc) {
-          assert.equal(doc.color, 'black');
+          done();
+        })
+      })
+
+      it('/sendpromise', function (done) {
+        req('/sendpromise', function (res) {
+          assert.equal(res.status, 200);
+          assert.ok(/^application\/json/.test(res.headers['content-type']));
+
+          var body = JSON.parse(res.text);
+
+          assert.ok(!!body);
+          assert.ok(Array.isArray(body));
+          assert.equal(body.length, 3);
+          body.forEach(function (doc) {
+            assert.equal(doc.type, 'Acoustic');
+          });
+
+          done();
+        })
+      })
+
+      it('/sendboth', function (done) {
+        req('/sendboth', function (res) {
+          assert.equal(res.status, 200);
+          assert.ok(/^application\/json/.test(res.headers['content-type']));
+
+          var body = JSON.parse(res.text);
+
+          assert.ok(!!body);
+          assert.equal(body.query.length, 2);
+          assert.equal(body.promise.length, 3);
+
+          done();
+        })
+      })
+
+      it('/sendqueryerror', function(done){
+        req('/sendqueryerror', function (res) {
+          assert.equal(res.status, 500);
+          assert.ok(~res.text.indexOf("Error: Can't use $fake with String."));
+          done();
         });
-      }
-    );
+      })
 
-    assert.response(app,
-      { url: '/sendpromise' }
-    , function (res) {
-        done();
-
-        assert.equal(res.statusCode, 200);
-        assert.ok(/^application\/json/.test(res.headers['content-type']));
-
-        var body = JSON.parse(res.body);
-
-        assert.ok(!!body);
-        assert.ok(Array.isArray(body));
-        assert.equal(body.length, 3);
-        body.forEach(function (doc) {
-          assert.equal(doc.type, 'Acoustic');
+      it('/sendpromiseerror', function(done){
+        req('/sendpromiseerror', function (res) {
+          assert.equal(res.status, 500);
+          assert.ok(~res.text.indexOf("Error: splat!"));
+          done();
         });
-      }
-    );
+      })
 
-    assert.response(app,
-      { url: '/sendboth' }
-    , function (res) {
-        done();
+      it('/sendbotherror', function(done){
+        req('/sendbotherror', function (res) {
+          assert.equal(res.statusCode, 500);
+          assert.ok(~res.text.indexOf("Error: splat!"));
+          done();
+        })
+      })
+    })
+  })
 
-        assert.equal(res.statusCode, 200);
-        assert.ok(/^application\/json/.test(res.headers['content-type']));
+  describe('redirect', function(){
+    var routes = {};
 
-        var body = JSON.parse(res.body);
-
-        assert.ok(!!body);
-        assert.equal(body.query.length, 2);
-        assert.equal(body.promise.length, 3);
-      }
-    );
-
-    assert.response(app,
-      { url: '/sendqueryerror' }
-    , function (res) {
-        done();
-        assert.equal(res.statusCode, 500);
-        assert.ok(~res.body.indexOf("Error: Can't use $fake with String."));
-      }
-    );
-
-    assert.response(app,
-      { url: '/sendpromiseerror' }
-    , function (res) {
-        done();
-        assert.equal(res.statusCode, 500);
-        assert.ok(~res.body.indexOf("Error: splat!"));
-      }
-    );
-
-    assert.response(app,
-      { url: '/sendbotherror' }
-    , function (res) {
-        done();
-        assert.equal(res.statusCode, 500);
-        assert.ok(~res.body.indexOf("Error: splat!"));
-      }
-    );
-  };
-
-  exports.redirect = function () {
-    var app = makeapp();
-    var db = connect();
-    var Drumset = db.model('Drumset', collection);
-
-    app.get('/redirect', function (req, res) {
+    routes['/redirect'] = function (req, res) {
       res.redirect('/sound');
-    });
-
-    app.get('/redirect/status', function (req, res) {
-      res.redirect('/sound', 301);
-    });
-
-    app.get('/redirectpromise', function (req, res) {
-      res.redirect(Drumset.usePromiseRedirect());
-    });
-
-    app.get('/redirectpromise/status', function (req, res) {
-      res.redirect(Drumset.usePromiseRedirect(), 301);
-    });
-
-    app.get('/redirectpromisestatus', function (req, res) {
-      res.redirect(Drumset.usePromiseRedirect(301));
-    });
-
-    app.get('/redirectpromisestatus/override', function (req, res) {
-      res.redirect(Drumset.usePromiseRedirect(301), 500);
-    });
-
-    app.get('/redirectpromiseerror', function (req, res) {
-      res.redirect(Drumset.promiseError());
-    });
-
-    // test
-
-    var pending = 7;
-    function done () {
-      if (--pending) return;
-      db.close();
-      finishTest();
     }
 
-    assert.response(app,
-      { url: '/redirect' }
-    , function (res) {
-        done();
-        assert.equal(res.statusCode, 302);
-        assert.ok('/sound', res.headers['Location']);
-      }
-    );
+    routes['/redirect/status'] = function (req, res) {
+      res.redirect(301, '/sound');
+    }
 
-    assert.response(app,
-      { url: '/redirect/status' }
-    , function (res) {
-        done();
-        assert.equal(res.statusCode, 301);
-        assert.ok('/sound', res.headers['Location']);
-      }
-    );
+    routes['/redirectpromise'] = function (req, res) {
+      res.redirect(Drumset.usePromiseRedirect());
+    }
 
-    assert.response(app,
-      { url: '/redirectpromise' }
-    , function (res) {
-        done();
-        assert.equal(res.statusCode, 302);
-        assert.ok('/redirect/promise', res.headers['Location']);
-      }
-    );
+    routes['/redirectpromise/status'] = function (req, res) {
+      res.redirect(Drumset.usePromiseRedirect(), 301);
+    }
 
-    assert.response(app,
-      { url: '/redirectpromise/status' }
-    , function (res) {
-        done();
-        assert.equal(res.statusCode, 301);
-        assert.ok('/redirect/promise', res.headers['Location']);
-      }
-    );
+    routes['/redirectpromisestatus'] = function (req, res) {
+      res.redirect(Drumset.usePromiseRedirect(301));
+    }
 
-    assert.response(app,
-      { url: '/redirectpromisestatus' }
-    , function (res) {
-        done();
-        assert.equal(res.statusCode, 301);
-        assert.ok('/redirect/promise', res.headers['Location']);
-      }
-    );
+    routes['/redirectpromisestatus/override'] = function (req, res) {
+      res.redirect(Drumset.usePromiseRedirect(301), 500);
+    }
 
-    assert.response(app,
-      { url: '/redirectpromisestatus/override' }
-    , function (res) {
-        done();
-        assert.equal(res.statusCode, 301);
-        assert.ok('/redirect/promise', res.headers['Location']);
-      }
-    );
+    routes['/redirectpromiseerror'] = function (req, res) {
+      res.redirect(Drumset.promiseError());
+    }
 
-    assert.response(app,
-      { url: '/redirectpromiseerror' }
-    , function (res) {
-        done();
-        assert.equal(res.statusCode, 500);
-        assert.ok(/splat!/.test(res.body));
-      }
-    );
-  }
-}
+    test(routes, function (req) {
+      it('/redirect' , function (done) {
+        var r = req('/redirect');
+        r.redirects(0).end(function (res) {
+          assert.equal(res.statusCode, 302);
+          assert.ok(/\/sound$/.test(res.headers['location']));
+          done();
+        })
+      })
+
+      it('/redirect/status',function (done) {
+        var r = req('/redirect/status');
+        r.redirects(0).end(function (res) {
+          assert.equal(res.statusCode, 301);
+          assert.ok(/\/sound$/.test(res.headers['location']));
+          done();
+        })
+      })
+
+      it('/redirectpromise',function (done) {
+        var r = req('/redirectpromise');
+        r.redirects(0).end(function (res) {
+          assert.equal(res.statusCode, 302);
+          assert.ok(/\/promise\/redirect$/.test(res.headers['location']));
+          done();
+        })
+      })
+
+      it('/redirectpromise/status',function (done) {
+        var r = req('/redirectpromise/status');
+        r.redirects(0).end(function (res) {
+          assert.equal(res.statusCode, 301);
+          assert.ok(/\/promise\/redirect$/.test(res.headers['location']));
+          done();
+        })
+      })
+
+      it('/redirectpromisestatus',function (done) {
+        var r = req('/redirectpromisestatus');
+        r.redirects(0).end(function (res) {
+          assert.equal(res.statusCode, 301);
+          assert.ok(/\/promise\/redirect$/.test(res.headers['location']));
+          done();
+        });
+      });
+
+      it('/redirectpromisestatus/override',function (done) {
+        var r = req('/redirectpromisestatus/override');
+        r.redirects(0).end(function (res) {
+          assert.equal(res.statusCode, 301);
+          assert.ok(/\/promise\/redirect$/.test(res.headers['location']));
+          done();
+        })
+      })
+
+      it('/redirectpromiseerror',function (done) {
+        var r = req('/redirectpromiseerror');
+        r.redirects(0).end(function (res) {
+          assert.equal(res.statusCode, 500);
+          assert.ok(/splat!/.test(res.text));
+          done();
+        })
+      })
+    })
+  })
+})
+
