@@ -8,7 +8,7 @@
  * Version.
  */
 
-exports.version = '0.0.4';
+exports.version = JSON.parse(require('fs').readFileSync(__dirname + '/package.json')).version;
 
 /**
  * Module dependencies.
