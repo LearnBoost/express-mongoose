@@ -1,18 +1,16 @@
 <img src="https://github.com/LearnBoost/express-mongoose/raw/master/express-mongoose.png"/>
 
-Express-mongoose adds Mongoose Query and Promise support to Express.
+Express-mongoose adds Mongoose [Query](http://mongoosejs.com/docs/api.html#query-js) and [Promise](http://mongoosejs.com/docs/api.html#promise-js) support to [Express](http://expressjs.com).
 
-Methods which now support Promises:
+Methods which now support `Promises`:
 
    - `res.render`
-   - `res.partial`
    - `res.send`
    - `res.redirect`
 
-Methods which now support Queries:
+Methods which now support `Queries`:
 
    - `res.render`
-   - `res.partial`
    - `res.send`
 
 ## Installation
@@ -44,23 +42,12 @@ In your routes:
       res.render('dashboard', {
           likes: req.user.getLikes()
         , latestNews: News.getLatest()
-        , locals: {
-            backwardcompatible: new Promise(somethingAsync)
-          }
+        , stuff: new Promise(somethingAsync)
       });
     });
 
-    app.get('/partial', function (req, res, next) {
-      res.partial('likes', {
-          likes: req.user.getLikes()
-        , locals: {
-            backwardcompatible: new Promise(somethingAsync)
-          }
-      });
-    });
-
-With `res.send` support you can pass a Query or Promise and the result will be rendered as json.
-If an error occurs, the error will be next()ed along as expected.
+With `res.send` support you can pass a `Query` or `Promise` and the result will be rendered as json.
+If an error occurs, the error will be passed to `next()` as expected.
 
     app.get('/send', function (req, res) {
       var News = db.model('News');
@@ -92,22 +79,18 @@ If an error occurs, the error will be next()ed along as expected.
       });
     });
 
-### Features
-
- - res.render support
- - res.partial support
- - res.send support
- - res.redirect support
- - nested locals support
-
 ### Error handling
 
- If a Query or Promise resolves to an error it will be forwarded on with `next(err)` as expected.
+ If a `Query` or `Promise` resolves to an error it will be forwarded on with `next(err)` as expected.
 
 ### Compatibility
 
-  - Express: 2.x
-  - Mongoose: 1.x
+```
+Express >=3.x use >= 0.1.0
+Express < 3.x use <  0.1.0
+
+Mongoose: >= 1.x
+```
 
 ## Authors
 
