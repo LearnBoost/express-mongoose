@@ -1,21 +1,26 @@
 {
   "name": "express-mongoose"
 , "description": "Adds Mongoose Promise/Query support to Express rendering."
-, "version": "0.0.5"
-, "author": "Aaron Heckmann <aaron@learnboost.com>"
+, "version": "0.1.0"
+, "author": "Aaron Heckmann <aaron.heckmann+github@gmail.com>"
 , "keywords": ["express", "mongoose", "mongo", "render", "promise", "query"]
 , "homepage": "https://github.com/learnboost/express-mongoose"
 , "dependencies": {
+    "sliced": "0.0.3"
   }
 , "devDependencies": {
-      "should": "0.2.1"
-    , "mongoose": ">= 1.0.0"
-    , "express": ">= 2.0.0"
-    , "jade": ">= 0.20.3"
-    , "expresso": ">= 0.9.2"
+      "mongoose": ">= 1.0.0"
+    , "express": "3.0.x"
+    , "jade": "0.27.5"
+    , "mocha": "1.6.0"
+    , "superagent": "0.9.5"
   }
 , "main": "index"
 , "engines": { "node": ">= 0.2.0" }
+, "scripts": { "test": "make test" }
+, "bugs": {
+    "url":"https://github.com/learnboost/express-mongoose/issues/new"
+  }
 , "repository": {
       "type": "git"
     , "url": "git://github.com/LearnBoost/express-mongoose.git"

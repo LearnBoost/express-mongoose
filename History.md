@@ -1,4 +1,11 @@
 
+0.1.0 / 2012-10-02
+==================
+
+  * fixed; works with express 3 #10
+  * fixed; refactored deprecated mongoose 'run' methods to 'exec' [jedwood](https://github.com/jedwood)
+  * tests; use mocha
+
 0.0.5 / 2012-02-29
 ==================
 
