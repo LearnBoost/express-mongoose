@@ -1,6 +1,5 @@
 
 test:
-	@NODE_ENV=test ./node_modules/expresso/bin/expresso \
-		test/index.js
+	@time ./node_modules/.bin/mocha $(T) $(TESTS)
 
 .PHONY: test
