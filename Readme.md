@@ -1,6 +1,6 @@
 <img src="https://github.com/LearnBoost/express-mongoose/raw/master/express-mongoose.png"/>
 
-Adds Mongoose [Query](http://mongoosejs.com/docs/api.html#query-js) and [Promise](http://mongoosejs.com/docs/api.html#promise-js) support to [Express](http://expressjs.com).
+Adds [Mongoose](http://mongoosejs.com) [Query](http://mongoosejs.com/docs/api.html#query-js) and [Promise](http://mongoosejs.com/docs/api.html#promise-js) support to [Express](http://expressjs.com).
 
 Methods which now support `Promises`:
 
