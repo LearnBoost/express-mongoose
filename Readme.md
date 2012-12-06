@@ -17,67 +17,83 @@ Methods which now support `Queries`:
 
     $ npm install express-mongoose
 
+### Use
+
+Include `express-mongoose` in your project, which performs the necessary bindings between `express` and `mongoose`.
+
+```js
+require('express-mongoose') // thats it!
+```
+
 ### Example
 
 In your schemas:
 
-    UserSchema.methods.getLikes = function (callback) {
-      // returns a Query
-      return this.model('Likes').find({ _user: this._id }, callback);
-    };
+```js
+UserSchema.methods.getLikes = function (callback) {
+  // returns a Query
+  return this.model('Likes').find({ _user: this._id }, callback);
+};
 
-    NewsSchema.statics.getLatest = function (callback) {
-      var promise = new Promise;
-      if (callback) promise.addBack(callback);
-      this.find({ datePublished: { $gt: new Date(Date.now() - 60000*60) } }, promise.resolve.bind(promise));
-      return promise;
-    };
+NewsSchema.statics.getLatest = function (callback) {
+  var promise = new Promise;
+  if (callback) promise.addBack(callback);
+  this.find({ datePublished: { $gt: new Date(Date.now() - 60000*60) } }, promise.resolve.bind(promise));
+  return promise;
+};
+```
 
 In your routes:
 
-    app.get('/dashboard', function (req, res) {
-      var News = db.model('News');
+```js
+app.get('/dashboard', function (req, res) {
+  var News = db.model('News');
 
-      // render support
-      res.render('dashboard', {
-          likes: req.user.getLikes()
-        , latestNews: News.getLatest()
-        , stuff: new Promise(somethingAsync)
-      });
-    });
+  // render support
+  res.render('dashboard', {
+       likes: req.user.getLikes()
+     , latestNews: News.getLatest()
+    , stuff: new Promise(somethingAsync)
+  });
+});
+```
 
 With `res.send` support you can pass a `Query` or `Promise` and the result will be rendered as json.
 If an error occurs, the error will be passed to `next()` as expected.
 
-    app.get('/send', function (req, res) {
-      var News = db.model('News');
-      res.send(News.getLatest());
-    });
+```js
+app.get('/send', function (req, res) {
+  var News = db.model('News');
+  res.send(News.getLatest());
+});
 
-    app.get('/promises', function (req, res) {
-      var promise = new Promise(somethingAsync);
-      res.send(promise);
-    });
+app.get('/promises', function (req, res) {
+  var promise = new Promise(somethingAsync);
+  res.send(promise);
+});
 
-    app.get('/more', function (req, res) {
-      res.send({
-          promise: new Promise(somethingAsync)
-        , news: req.user.getLatest()
-      });
-    });
+app.get('/more', function (req, res) {
+  res.send({
+      promise: new Promise(somethingAsync)
+    , news: req.user.getLatest()
+  });
+});
+```
 
 `res.redirect` accepts a `Promise` as well.
 
-    app.get('/redirect', function (req, res) {
-      var promise = new Promise;
-      res.redirect(promise);
+```js
+app.get('/redirect', function (req, res) {
+  var promise = new Promise;
+  res.redirect(promise);
 
-      process.nextTick(function () {
-        promise.complete(url [, status]);
-        // or
-        promise.error(new Error('uh oh'));
-      });
-    });
+  process.nextTick(function () {
+    promise.complete(url [, status]);
+    // or
+    promise.error(new Error('uh oh'));
+  });
+});
+```
 
 ### Error handling
 
