@@ -165,7 +165,8 @@ describe('express-mongoose', function(){
     });
 
     after(function (done) {
-      server.close(done);
+      server.close();
+      done();
     })
 
     next(function req (path, cb) {
