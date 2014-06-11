@@ -58,8 +58,8 @@ express.response.send = function expressmongoose_send () {
     send.apply(self, args);
   }
 
-  if (args[0] instanceof Promise) {
-    return args[0].addBack(handleResult);
+  if (isPromise(args[0])) {
+    return onResolve(args[0], handleResult);
   }
 
   if (args[0] instanceof Query) {
@@ -109,8 +109,8 @@ express.response.redirect = function expressmongoose_redirect () {
     redirect.apply(self, args);
   }
 
-  if (args[0] instanceof Promise) {
-    return args[0].addBack(handleResult);
+  if (isPromise(args[0])) {
+    return onResolve(args[0], handleResult);
   }
 
   redirect.apply(this, args);
@@ -135,7 +135,7 @@ function resolve (options, callback, nested) {
   while (i--) {
     key = keys[i];
     item = options[key];
-    if (item instanceof Query || item instanceof Promise) {
+    if (item instanceof Query || isPromise(item)) {
       item.key = key;
       remaining.push(item);
     }
@@ -163,7 +163,7 @@ function resolve (options, callback, nested) {
     if (item instanceof Query) {
       item.exec(handleResult);
     } else {
-      item.addBack(handleResult);
+      onResolve(item, handleResult);
     }
   });
 
@@ -180,3 +180,31 @@ function resolve (options, callback, nested) {
   }
 }
 
+/**
+ * Basic check for promise API
+ * @api private
+ */
+
+function isPromise (thenable) {
+  try {
+    return thenable && 'function' === typeof thenable.then;
+  } catch(e) {
+    return false;
+  }
+}
+
+/**
+ * onResolve helper for generic promises
+ * @api private
+ */
+
+function onResolve (thenable, callback) {
+  thenable.then(function () {
+    var args = Array.prototype.slice.call(arguments);
+    callback.apply(null, [null].concat(args));
+  }, function (err) {
+    callback(err, null);
+  });
+
+  return thenable;
+}
