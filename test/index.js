@@ -314,6 +314,10 @@ describe('express-mongoose', function(){
       });
     }
 
+    routes['/sendnothing'] = function(req, res) {
+      res.send();
+    }
+
     test(routes, function (req) {
       it('/sendquery', function(done){
         req('/sendquery', function (res) {
@@ -386,6 +390,13 @@ describe('express-mongoose', function(){
         req('/sendbotherror', function (res) {
           assert.equal(res.statusCode, 500);
           assert.ok(~res.text.indexOf("Error: splat!"));
+          done();
+        })
+      })
+
+      it('/sendnothing', function(done){
+        req('/sendnothing', function (res) {
+          assert.equal(res.statusCode, 200);
           done();
         })
       })

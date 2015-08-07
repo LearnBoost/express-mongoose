@@ -66,7 +66,7 @@ express.response.send = function expressmongoose_send () {
     return args[0].exec(handleResult);
   }
 
-  if ('Object' == args[0].constructor.name) {
+  if (args[0] && 'Object' == args[0].constructor.name) {
     return resolve(args[0], handleResult);
   }
 
